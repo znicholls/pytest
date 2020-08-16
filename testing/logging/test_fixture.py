@@ -6,6 +6,7 @@ from _pytest.pytester import Testdir
 
 logger = logging.getLogger(__name__)
 sublogger = logging.getLogger(__name__ + ".baz")
+otherlogger = logging.getLogger("tpytest")
 
 
 def test_fixture_help(testdir):
@@ -89,6 +90,27 @@ def test_with_statement(caplog):
         with caplog.at_level(logging.CRITICAL, logger=sublogger.name):
             sublogger.warning("logger WARNING level")
             sublogger.critical("logger CRITICAL level")
+
+    assert "DEBUG" not in caplog.text
+    assert "INFO" in caplog.text
+    assert "WARNING" not in caplog.text
+    assert "CRITICAL" in caplog.text
+
+
+def test_with_statement_root_messages_still_logged(caplog):
+    with caplog.at_level(logging.INFO):
+        with caplog.at_level(logging.CRITICAL, logger=otherlogger.name):
+            # doesn't come through because root logger is at INFO level
+            logger.debug("root DEBUG level")
+            # TODO: check expected behaviour here
+            # does come through because setting the level of otherlogger
+            # should not affect the root logger
+            logger.info("root INFO level")
+
+            # doesn't come through because otherlogger is at CRITICAL level
+            otherlogger.warning("otherlogger WARNING level")
+            # does come through
+            otherlogger.critical("otherlogger CRITICAL level")
 
     assert "DEBUG" not in caplog.text
     assert "INFO" in caplog.text
